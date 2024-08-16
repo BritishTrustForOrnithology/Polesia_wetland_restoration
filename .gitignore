@@ -3,8 +3,7 @@
 .RData
 .Ruserdata
 *.pdf
-*.png
-*.tiff
-*.jpg
-*.svg
 *.txt
+*.jpg
+results/
+data/GEE_data/
