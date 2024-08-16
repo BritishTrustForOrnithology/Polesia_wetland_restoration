@@ -1,0 +1,85 @@
+"""
+data sample: movement points from 2019-10-01 to 2019-10-02, sample was chosen because the time range can be calculated for NDWI values during previous daily NDWI calculation
+used both Modis and Sentinel-2 satellite collection to calculating ndwi
+"""
+"""
+ndwi calculation using Sentinel-2 data, incomplete results, 209 out of 3108 is null, 20-23m analysis for calculating 3108 point data
+if want to store the calculated ndwi value into csv file, it will take around 36-40 per runtime, but actual calculation and analysis time should be around 20-23 minutes
+"""
+def extract_ndwi_sentinel2(point):
+#create and Earth Engine point as geographical boundaries
+    lat = point['lat']
+    lon = point['lon']
+    point_geom = ee.Geometry.Point(lon, lat)
+#filter through the satellite collections using the time range (data time range ± 1day)
+    collection = (ee.ImageCollection('COPERNICUS/S2')
+    .filterBounds(point_geom)
+    .filterDate('2019-09-30', '2019-10-03')
+    .sort('system:time_start'))
+#similiar lamba fuction to calculate normalized difference from the previous daily NDWI calculation
+    s2_ndwi = collection.map(lambda img: img.normalizedDifference(['B3', 'B8'])).mean()
+    s2_value = s2_ndwi.select(['nd']).reduceRegion(reducer=ee.Reducer.mean(), geometry=point_geom, scale = 10).get('nd')
+#returned NDWI value is an earth engine object
+    return s2_value
+results_s2 = []
+"""
+iterating through each row of sample data to extract date and coordinates needed for cerating the new dataframe
+use try...except block for error handling:
+if a point data is unable to return valid NDWI value, record the NDWI value as none instead
+"""
+for index, row in df_points.iterrows():
+  try:
+        ndwi_sentinel2 = extract_ndwi(row)
+        #append the results to the list
+        results_s2.append({
+            'date': row['Grouped_Date'],  # Update with the actual date
+            'lat': row['lat'],
+            'lon': row['lon'],
+            'ndwi_value': float(ndwi_sentinel2.getInfo()) if ndwi_sentinel2 is not None else None
+        })
+  except ee.EEException as e:
+      print(f"Error extracting NDWI values for point {index + 1}")
+      # If an error occurs, append a record with 'None' for the 'ndwi_value'
+      results_s2.append({
+          'date': row['Grouped_Date'],  # Update with the actual date
+          'lat': row['lat'],
+          'lon': row['lon'],
+          'ndwi_value': None
+      }) 
+"""
+save the results to dataframe and csv file is optional, adjust based on customised requirements
+"""
+s2_result_df = pd.DataFrame(results_s2)
+s2_result_df.to_csv('/content/drive/MyDrive/s2_ndwi_results_points.csv', index=False)
+"""
+ndwi calculation using Modis data, 5-6m for 3108 points analysis, results are complete with no error returned.
+if want to store the calculated ndwi value into csv file, it will take around 7-9 per runtime, but actual calculation and analysis time should be around 5-6 minutes
+calculating ndwi is the same method as the sentinel-2 based calculation, with different satellite bands collection
+"""
+def extract_ndwi_modis(point):
+    lat = point['lat']
+    lon = point['lon']
+    point_geom = ee.Geometry.Point(lon, lat)
+    collection = (ee.ImageCollection('MODIS/006/MOD09GA')
+    .filterBounds(point_geom)
+    .filterDate('2019-09-30', '2019-10-03')
+    .sort('system:time_start'))
+    modis_ndwi = collection.map(lambda img: img.normalizedDifference(['sur_refl_b02', 'sur_refl_b06'])).mean()
+    modis_value = modis_ndwi.select(['nd']).reduceRegion(reducer=ee.Reducer.mean(), geometry=point_geom, scale = 250).get('nd')
+    return modis_value
+results_modis = []
+#since there is no error in calculating ndwi using modis, try & except block is not used
+for index, row in df_points.iterrows():
+    ndwi_modis = extract_ndwi_modis(row)
+    # Append the results to the list
+    results_modis.append({
+        'date': row['Grouped_Date'],  # Update with the actual date
+        'lat': row['lat'],
+        'lon': row['lon'],
+        'ndwi_value': float(ndwi_modis.getInfo()) if ndwi_modis is not None else None
+    })
+"""
+save the results to dataframe and csv file is optional, adjust based on customised requirements
+"""
+modis_result_df = pd.DataFrame(results_modis)
+modis_result_df.to_csv('/content/drive/MyDrive/modis_ndwi_results_points.csv', index=False)

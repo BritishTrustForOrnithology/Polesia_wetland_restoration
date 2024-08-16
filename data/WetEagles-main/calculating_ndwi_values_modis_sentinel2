@@ -1,0 +1,93 @@
+"""
+customised initialization for the operation under Google Colab environment, adjust based on own setup
+"""
+import ee
+import geopandas as gpd
+import pandas as pd
+from shapely.geometry import box
+from google.colab import drive
+ee.Authenticate()
+ee.Initialize()
+drive.mount('/content/gdrive')
+file_path = '/content/gdrive/My Drive/max_min_latitude_longititude_sorted_by_time.csv'
+df = pd.read_csv(file_path, index_col=0)
+
+def create_aoi_and_dates(row):
+#create an Earth Engine polygon based on the coordinates for each day
+      aoi = ee.Geometry.Polygon([
+            [row['min_long'], row['min_lat']],
+            [row['max_long'], row['min_lat']],
+            [row['max_long'], row['max_lat']],
+            [row['min_long'], row['max_lat']],
+            [row['min_long'], row['min_lat']]
+      ])
+#set up the time range for filtering through the bands collection
+      year = row['year']
+      month = row['month']
+      day = row['day']
+      start = ee.Date.fromYMD(year, month, day).advance(-1, 'day')
+      end = ee.Date.fromYMD(year, month, day).advance(1, 'day')
+      date = ee.Date.fromYMD(year, month, day)
+#return the result as a dictionary containing the polygon. time range and date
+      return {'aoi': aoi, 'start_date':start, 'end_date': end, 'date': date}
+ee_aois_and_dates = df.apply(create_aoi_and_dates, axis=1)
+#create list for each satellite bands collection to calculate the NDWI
+results_modis = []
+results_s2 = []
+
+#iterate through the dictionary created from previous functions
+for index, entry in enumerate(ee_aois_and_dates):
+#extract the time range, polygon from the dictionary as the conditions for filter through the bands collection to calculate NDWI value
+    ee_aoi = entry['aoi']
+    start_date = entry['start_date']
+    end_date = entry['end_date']
+    date = entry['date']
+#filter the staellite bands collection we needed for the NDWI calculation
+    collection = (ee.ImageCollection('MODIS/006/MOD09GA')
+    .filterBounds(ee_aoi)
+    .filterDate(start_date, end_date)
+    .sort('system:time_start'))
+"""
+use map function to apply a specified lamba function to each image in filtered satellite collection
+the lamba function here calculate the normalized difference between the reflectance value in the Near Infrared (NIR)('sur_refl_b02') and Shortwave infrared (SWIR)('sur_refl_b06') bands
+normally NDWI value is calculated from normalized difference between red and green bands, but here, blue bands is used as MODIS does not have green bands
+.mean() function is applied to compute the pixel scale-wise mean across all the images in the collection. The result is single image represneting the average NDWI over the entire time range
+"""
+    modis_ndwi = collection.map(lambda img: img.normalizedDifference(['sur_refl_b02', 'sur_refl_b06'])).mean()
+    modis_value = modis_ndwi.select(['nd']).reduceRegion(reducer=ee.Reducer.mean(), geometry=ee_aoi, scale = 250).get('nd')
+    results_modis.append({'Date': pd.to_datetime(date.getInfo()['value'], unit='ms').strftime('%Y-%m-%d'), 'NDWI_value': modis_value.getInfo()})
+#all the ndwi results are saved in a new dataframe, a csv file is optional for storing the results
+modis_results_df = pd.DataFrame(results_modis)
+modis_results_df.to_csv('/content/gdrive/My Drive/ndwi_results_modis.csv', index=False)
+
+"""
+the iteration through the dictionary and extract the conditions are the same as the previous function
+only difference being the different satellite band collection used
+"""
+for index, entry in enumerate(ee_aois_and_dates):
+    ee_aoi = entry['aoi']
+    start_date = entry['start_date']
+    end_date = entry['end_date']
+    date = entry['date']
+    collection = (ee.ImageCollection('COPERNICUS/S2')
+    .filterBounds(ee_aoi)
+    .filterDate(start_date, end_date)
+    .sort('system:time_start'))
+"""
+we use the same fucntions here to calculate the normalized differences, the bands we used here are different, as 'B3' is the green band and 'B8' is the visible and near infrared band
+this calculation is focused on the change of water and water bodies in the specific images more
+same '.mean()' function is applied as well to calculate the average
+"""
+    s2_ndwi = collection.map(lambda img: img.normalizedDifference(['B3', 'B8'])).mean()
+"""
+due to the lack of data, to avoid error mesages when executing the functions, we used a try & except to loop through all the avaliable data
+if a calculation is unable to return valid result, we record the results as null
+"""
+    try:
+      s2_value = s2_ndwi.select(['nd']).reduceRegion(reducer=ee.Reducer.mean(), geometry=ee_aoi, scale = 10).get('nd')
+      results_s2.append({'Date': pd.to_datetime(date.getInfo()['value'], unit='ms').strftime('%Y-%m-%d'), 'NDWI_value': s2_value.getInfo()})
+    except:
+      results_s2.append({'Date': pd.to_datetime(date.getInfo()['value'], unit='ms').strftime('%Y-%m-%d'), 'NDWI_value': null})
+#all the ndwi results are saved in a new dataframe, a csv file is optional for storing the results
+s2_results_df = pd.DataFrame(results_s2)
+s2_results_df.to_csv('/content/gdrive/My Drive/ndwi_results_sentinel2.csv', index=False)
