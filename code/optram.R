@@ -6,6 +6,8 @@
 
 ## Formula and methodology from https://www.sciencedirect.com/science/article/pii/S0034425723002870 
 
+# Testing 
+
 # Loading data from Google Earth engine
 # STR from wet and dry edges
 files_dry <- list.files(pattern="*dry*")
