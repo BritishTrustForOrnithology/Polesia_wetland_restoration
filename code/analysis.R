@@ -23,11 +23,6 @@ library(mgcv)
 setwd("./data/GEE_data")
 ind <- read.csv("MSI-results.csv")[,-1] # Ignore first column
 
-## list_dry <- list.files(pattern="*dry*")
-## list_wet <- list.files(pattern="*wet*")
-## dry_edge <-  do.call("rbind", list_dry)
-## wet_edge <-  do.call("rbind", list_dry)
-## optram <- (str - dry_edge)/(wet - dry)
 # Convert coordinates to sf object
 ind_sf <- cbind(st_as_sf(geojson_sf(ind$.geo), st_crs = 4326),ind)
 
