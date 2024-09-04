@@ -20,8 +20,7 @@ library(ggthemes)
 library(mgcv)
 
 # Obtained from GEE
-setwd("./data/GEE_data")
-ind <- read.csv("MSI-results.csv")[,-1] # Ignore first column
+ind <- read.csv("./data/GEE_data/MSI-results.csv")[,-1] # Ignore first column
 
 # Convert coordinates to sf object
 ind_sf <- cbind(st_as_sf(geojson_sf(ind$.geo), st_crs = 4326),ind)
@@ -36,8 +35,7 @@ ind_sf <- cbind(ind_sf, st_coordinates(ind_sf))
 ind_sf$side <- as.factor(ifelse(ind_sf$side == "a", "south", "north"))
 
 # Shapefile of Almany border
-setwd("~/BTO projects/Polesia project/wetland-restoration")
-road <- st_read("Almany-border.kml")
+road <- st_read("./data/Almany-border.kml")
 
 # Calculate distance to road 
 ind_sf$dist <- as.numeric(st_distance(ind_sf, road))/1000
