@@ -21,30 +21,59 @@ rm(list = ls())
 ## Formula and methodology from https://www.sciencedirect.com/science/article/pii/S0034425723002870 
 
 # Loading data from Google Earth engine
+pa_name <- "Cheremske"
 # STR
-str <- read.csv("./data/GEE_data/STR-Cheremske.csv")
+str_files <- list.files(pattern = paste0("STR-",pa_name), recursive = T) 
+str_list <- lapply(str_files, "read.csv") 
+str_df <- Reduce(function(x, y) merge(x, y, all=T), str_list)
+                 
 # NDVI
-ndvi <- read.csv("./data/GEE_data/NDVI-Cheremske.csv")
+ndvi_files <- list.files(pattern = paste0("NDVI-",pa_name), recursive = T)
+ndvi_list <- lapply(ndvi_files, "read.csv") 
+ndvi_df <- Reduce(function(x, y) merge(x, y, all=T), ndvi_list)
 
-# Rename columns to show months
-colnames(str)[-c(1,(ncol(str)-2):ncol(str))] <- substr(colnames(str)[-c(1,(ncol(str)-2):ncol(str))],6,7)
-colnames(ndvi)[-c(1,(ncol(ndvi)-2):ncol(ndvi))] <- substr(colnames(ndvi)[-c(1,(ncol(ndvi)-2):ncol(ndvi))],6,7)
+# Rename columns to show months. Some columns have full stops between year and month so remove these. 
+colnames(str_df)[-(1:4)] <- substr(gsub("\\.","",colnames(str_df)[-(1:4)]),2,7)
+colnames(ndvi_df)[-(1:4)] <- substr(gsub("\\.","",colnames(ndvi_df)[-(1:4)]),2,7)
 
 # Convert to long format
-str_long <- melt(setDT(str), id.vars = c("system.index","lc","remapped",".geo"), variable.name = "month", value.name = "STR")
-ndvi_long <- melt(setDT(ndvi), id.vars = c("system.index","lc","remapped",".geo"), variable.name = "month", value.name = "NDVI")
+str_long <- melt(setDT(str_df), id.vars = c("system.index","lc","remapped",".geo"), variable.name = "year_month", value.name = "STR")
+ndvi_long <- melt(setDT(ndvi_df), id.vars = c("system.index","lc","remapped",".geo"), variable.name = "year_month", value.name = "NDVI")
 
 # Remove NA 
 str_long <- str_long[!is.na(str_long$STR)]
 ndvi_long <- ndvi_long[!is.na(ndvi_long$NDVI)]
 
-# Calculate OPTRAM using mean slop and intercept parameter 
-ind <- str_long
-ind$NDVI <- ndvi_long$NDVI
+# Separate year and month
+str_long$year <- as.numeric(substr(str_long$year_month,1,4))
+str_long$month <- as.numeric(substr(str_long$year_month,5,6))
+ndvi_long$year <- as.numeric(substr(ndvi_long$year_month,1,4))
+ndvi_long$month <- as.numeric(substr(ndvi_long$year_month,5,6))
 
-# Using weighted mean of parameters derived from subsets of the study area
-ind$dry <- -0.2019163477065955 + 2.7118313659398905*ind$NDVI
-ind$wet <- 2.5645077855283933	+ 6.854940135998448*ind$NDVI
+# Remove December to Feb
+str_long <- str_long[str_long$month != 12 & str_long$month != 1 & str_long$month != 2,]
+ndvi_long <- ndvi_long[ndvi_long$month != 12 & ndvi_long$month != 1 & ndvi_long$month != 2,]
+
+# Combine data and make sure data are numeric
+ind <- str_long
+ind$STR <- as.numeric(ind$STR)
+ind$NDVI <- as.numeric(ndvi_long$NDVI)
+
+# Edge parameters for each year 
+params <- read.csv("./data/GEE_data/restoration_optram_params.csv")
+# Select for specific restoration area
+params <- params[params$restoration.area == pa_name,]
+# Convert to wide format 
+params_wide <- dcast(setDT(params), year ~ edge, value.var = c("y", "slope"))
+# Merge with NDVI and STR data
+ind <- merge(ind, params_wide)
+
+# Calculate edges
+# ind$dry <- ind$y_dry + ind$slope_dry*ind$NDVI
+# ind$wet <- ind$y_wet + ind$slope_wet*ind$NDVI
+# Average across years
+ind$dry <- mean(params$y[params$edge == "dry"]) + mean(params$slope[params$edge == "dry"])*ind$NDVI
+ind$wet <- mean(params$y[params$edge == "wet"]) + mean(params$slope[params$edge == "wet"])*ind$NDVI
 
 # Calculate OPTRAM 
 ind$optram <- (ind$STR - ind$dry)/(ind$wet - ind$dry)
@@ -52,54 +81,116 @@ ind$optram <- (ind$STR - ind$dry)/(ind$wet - ind$dry)
 # Convert land cover to factor
 ind$lc <- as.factor(ind$lc)
 
-# Convert month to numeric
-ind$month_num <- as.numeric(as.factor(ind$month))
-
 # Remove points with missing STR/NDVI
 ind_sub <- ind[!is.na(ind$STR),]
 
-# Extract coordinates and convert to sf object 
-ind_sf <- cbind(st_as_sf(geojson_sf(ind_sub$.geo), st_crs = 4326),ind_sub)
-ind_sf <- cbind(ind_sf, st_coordinates(ind_sf))
-
-# Map optram
-col <- c('#a50026','#d73027','#f46d43','#fdae61','#fee090','#ffffbf',
-         '#abd9e9','#74add1','#4575b4','#313695') ## Colour palette
-
-ggplot() +
-  geom_sf(data = ind_sf %>% arrange(optram, decreasing = T), mapping = aes(col = optram), size = .05) +
-  theme_map() +
-  scale_colour_gradientn(colours = col) +
-  theme(legend.position = c(.8,.5)) 
-
-table(ind_sub$lc[ind_sub$optram > 1]) ## Mostly peatlands and deciduous forest
-table(ind_sub$month[ind_sub$optram > 1]) ## Mostly summer
+# Explore OPTRAM values
+hist(ind_sub$optram)
+table(ind_sub$lc[ind_sub$optram > 1])
+table(ind_sub$month[ind_sub$optram > 1])
 
 # Remove over-saturated pixels above the wet edge 
 ind_sub <- ind_sub[ind_sub$optram <= 1,]
 
-# Distribution of data points. Predominantly fen and transition mire. 
-table(ind_sub$month_num,ind_sub$lc) ## Little data for Feb
+# Distribution of data points. 
+table(ind_sub$month,ind_sub$lc) 
 
-ggplot(ind_sub %>% filter(lc == 6), aes(x = as.factor(month_num), y = optram)) +
-  geom_violin(bw = .02, width = 1) + 
-  geom_point(ind_sub %>% filter(lc == 6) %>%  group_by(month_num) %>% summarise(mean = mean(optram)), mapping = aes(as.factor(month_num), y = mean), size = 2, shape = 24, fill = "blue") +
-  xlab("") + ylab("OPTRAM") +
-  theme_classic() +
-  scale_x_discrete(labels = c("June", "July", "Aug", "Sept", "Oct", "Nov", 
-                   "Jan", "Feb", "March", "April", "May"))
+# Focus on peatlands
+ind_sub <- ind_sub[ind_sub$lc == 6 | ind_sub$lc == 7,]
 
-# Produce animation  
-ind_sf <- cbind(st_as_sf(geojson_sf(ind_sub$.geo), st_crs = 4326),ind_sub)
+# Combine geometry and attributes in one step
+ind_sf <- st_as_sf(cbind(ind_sub, st_as_sf(geojson_sf(ind_sub$.geo), crs = 4326)))
+
+# Extract coordiantes to correct for for spatial autocorrelation 
 ind_sf <- cbind(ind_sf, st_coordinates(ind_sf))
 
+ind_sf_bile <- ind_sf
+ind_sf_bile$site <- "Bile lake"
+ind_sf$site <- "Cheremske bog"
+ind_sf <- rbind(ind_sf, ind_sf_bile)
+ind_sf$site <- as.factor(ind_sf$site)
+# Run model exploring OPTRAM over time
+spatial_mod <- bam(
+  optram ~
+    s(year, k = 3, by = site) +
+    s(month, bs = "cc", k = 3) + 
+    ti(year, month, bs = c("tp", "cc"), k = c(3,3), by = site) +
+    s(X, Y, bs = "ds", k = 99),    
+  gamma = 1.4, select = T, discrete = T,
+  data = ind_sf
+)
+
+# Explore results 
+summary(spatial_mod)
+plot(spatial_mod)
+
+# Plot interaction between year and month
+# Create a new data frame for predictions
+newdata <- expand.grid(
+  site = unique(ind_sf$site),
+  month = unique(ind_sf$month),    
+  year = unique(ind_sf$year),    
+  X = mean(ind_sf$X),                      # Control for X at its mean value
+  Y = mean(ind_sf$Y)                       # Control for Y at its mean value
+)
+
+# Add predicted values to the new data frame
+predictions <- predict(spatial_mod, newdata, se.fit = TRUE)
+newdata$pred <- predictions$fit
+newdata$se <- predictions$se.fit
+# Calculate 95% confidence intervals
+newdata$lower <- newdata$pred - 1.96 * newdata$se
+newdata$upper <- newdata$pred + 1.96 * newdata$se
+
+month_labels <- c("Jan", "Feb", "March", "April", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec")
+month_labeller <- as_labeller(setNames(month_labels, 1:12))
+
+# Plot using ggplot2
+ggplot(newdata, aes(x = year, y = pred, linetype = site, group = site)) +
+  geom_line() +
+  facet_wrap(~month, labeller = labeller(month = month_labeller))+
+  labs(linetype = "") +
+  geom_ribbon(aes(ymin = lower, ymax = upper), col = NA, alpha = .5) +
+  labs(col = "", fill = "") + xlab("") + ylab("Predicted OPTRAM
+                                  ") + 
+  theme_classic() 
+
+# Produce animation ####
+
+# Create 'year_month' as a factor for mapping
+ind_sf$year_month <- as.factor(paste(ind_sf$year, ind_sf$month, sep = "-"))
+
+# Convert necessary columns to data.table for faster aggregation
+ind_dt <- as.data.table(ind_sf[, c("system.index", "year_month", "optram", "geometry")])
+
+# Perform aggregation with faster geometry handling
+monthly_dt <- ind_dt[, .(
+  optram = mean(optram, na.rm = TRUE),
+  geometry = geometry[1]  # Take the first geometry (avoid st_union)
+), by = .(system.index, year_month)]
+
+# Ensure 'year_month' stays a factor (if it was altered during aggregation)
+monthly_dt$year_month <- factor(monthly_dt$year_month, levels = levels(ind_sf$year_month))
+
+# Convert back to sf at the end
+monthly_mean <- st_as_sf(monthly_dt, crs = 4326)
+
+# Boundary of PA
+bound <- st_read("./data/elsppolesiashapes/Study_sites_merged.shp")
+pa <- bound[bound$Site_name == "Cheremske Bog",]
+
+col <- c('#a50026','#d73027','#f46d43','#fdae61','#fee090','#ffffbf',
+         '#abd9e9','#74add1','#4575b4','#313695') ## Colour palette
+
 anim <- ggplot() +
-  geom_sf(data = ind_sf %>% group_by(system.index, month_num) %>% summarise(optram = mean(optram)), mapping = aes(col = optram, group = system.index), size = .2) +
+  geom_sf(data = pa, fill = NA) +
+  geom_sf(data = monthly_mean, mapping = aes(col = optram, group = system.index), size = .2) +
   theme_map() +
   labs(col = "OPTRAM") +
   scale_colour_gradientn(colours = col, limits = c(0,1)) +
-  theme(legend.position = c(.01,.5)) +
-  ggtitle(month_num) +
-  transition_time(month_num) 
-animate(anim, width = 5, height = 8, units = "in", res = 300, fps = 100)
+  theme(legend.position = c(.01,.5)) + 
+  transition_states(year_month) +
+  labs(caption = "{closest_state}") 
+animate(anim, width = 5, height = 4, units = "in", res = 300, fps = 5)
 anim_save(paste0(getwd(),"/results/animation.gif"))
+

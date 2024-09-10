@@ -13,6 +13,7 @@ library(data.table)
 library(dplyr)
 library(ggthemes)
 library(gridExtra)
+library(emmeans)
 
 # Clear data
 rm(list = ls())
@@ -75,34 +76,17 @@ ind_sub$month_num <- as.numeric(as.factor(ind_sub$month))
 
 # Remove points with missing STR/NDVI
 ind_sub <- ind_sub[!is.na(ind_sub$STR),]
-ind_sub <- ind_sub[ind_sub$optram <= 1,] # Optram values should be between 0 and 1, not convinced about removing these, but its November and January anyway when there aren't many data
+ind_sub <- ind_sub[ind_sub$optram <= 1,] # Optram values should be between 0 and 1. Remove over-saturated pixels. 
 
-# Date exploration
-month_labels <- c("June", "July", "Aug", "Sept", "Oct", "Nov", "Dec",
-                  "Jan", "Feb", "March", "April", "May")
-month_labeller <- as_labeller(setNames(month_labels, 1:12))
-
-ggplot(ind_sub, aes(x = side, y = optram, col = lc)) +
-  geom_boxplot() + ## Overall, looks higher on the north side? 
-  xlab("") + ylab("OPTRAM") +
-  scale_colour_manual(values = c('#336600','#33cc33','#ffb3ff','#cc6600','#808000','#F0E68C'), labels = c("Coniferous\nforest", "Deciduous\nforest", "Meadow", "Raised bog", "Fen/\ntransition mire", "Scrub")) +
-  labs(col = NULL) +
-  facet_wrap(vars(month_num), labeller = labeller(month_num = month_labeller)) 
-
-# Distribution of data points. Remove June, November, January? 
+# Distribution of data points. Not many data points for Feb. 
 table(ind_sub$month_num, ind_sub$side, ind_sub$lc)
 
 # Run model 
 spatial_mod <- bam(
   optram ~
-    s(dist, by = interaction(lc, side), k = 3) + # Main effect of distance varying by land cover and side
-    s(month_num, bs = "cc", by = side, k = 9) + # Main effect of month varying by land cover and side
-    s(month_num, bs = "cc", by = lc, k = 9) +
-    ti(dist, month_num, bs = c("tp", "cc"), by = lc) + # Interaction between distance and month, varying by land cover and side
-    ti(dist, month_num, bs = c("tp", "cc"), by = side) +  
-    s(X, Y, bs = "ds", k = 99) +          # Spatial smooth term
-    lc +                                  # Main effect of land cover
-    side,                                # Main effect of land cover
+    dist*side + # Main effect of distance varying by land cover and side
+    s(month_num, bs = "cc", k = 3) + # Main effect of month varying by land cover and side
+    lc*side,                                # Main effect of land cover
   gamma = 1.4, select = T, discrete = T,
   data = ind_sub
 )
@@ -111,9 +95,12 @@ spatial_mod <- bam(
 summary(spatial_mod)
 AIC(spatial_mod)
 
-# Create a new data frame for predictions of effect of land cover and side
+emmeans(spatial_mod, list(pairwise ~ lc|side), adjust = "tukey")
+test(emtrends(spatial_mod, ~ side, var = "dist"))
+
+# Create a new data frame fodist()# Create a new data frame for predictions of effect of land cover and side
 newdata <- expand.grid(
-  dist = c(.2, .999),                       # Fixed values of dist
+  dist = c(.02, .999),                       # Fixed values of dist
   lc = levels(ind_sub$lc),                  # All levels of lc
   side = levels(ind_sub$side),              # All levels of side
   month_num = unique(ind_sub$month_num),    # Include all unique values of month_num
@@ -130,124 +117,50 @@ newdata$lower <- newdata$pred - 1.96 * newdata$se
 newdata$upper <- newdata$pred + 1.96 * newdata$se
 
 # Calculate average predictions for each combination of dist, land cover and side
-# avg_predictions <- aggregate(cbind(pred, lower, upper) ~ dist + lc + side, data = newdata, FUN = mean)
+avg_predictions <- aggregate(cbind(pred, lower, upper) ~ dist + lc + side, data = newdata, FUN = mean)
 
-# Define custom labels for lc and month_num
-lc_labels <- c("Coniferous\nforest", "Deciduous\nforest", "Meadow", "Raised bog", 
-               "Fen/\ntransition mire", "Scrub")
-
-# Map these labels to the corresponding values in your data
-lc_labeller <- as_labeller(setNames(lc_labels, unique(ind_sub$lc)))
+# Create group from distance and side of barrier so that in the plot it goes 1km south, .2km south, .2km north, 1km north
+avg_predictions$group_fact <- factor(paste(avg_predictions$side, avg_predictions$dist), levels = c("south 0.999", "south 0.02", "north 0.02", "north 0.999"))
 
 # Plot using ggplot2
-ggplot(newdata, aes(x = as.factor(month_num), y = pred, col = interaction(as.factor(dist), side))) +
+ggplot(avg_predictions, aes(x = group_fact, y = pred, col = as.factor(lc))) +
   geom_point(position = position_dodge(0.5), size = .8) +
+  scale_x_discrete(labels = NULL) +
   geom_errorbar(aes(ymin = lower, ymax = upper), width = 0, position = position_dodge(0.5)) +
-  facet_grid(rows = vars(lc),  labeller = labeller(lc = lc_labeller)) + # Separate plots for each value of dist
   labs(col = "") + xlab("") + ylab("Predicted OPTRAM
                                   ") + ## Higher values indicate higher water table
-  scale_colour_manual(values = c("#78c679","#238443","#a6bddb","#0570b0"), labels = c("North/West:\n200m", "1km", "South/East:\n200m", "1km")) +
   theme_minimal() +
-  scale_x_discrete(labels =  c("June", "July", "Aug", "Sept", "Oct", "Feb", "March", "April", "May"))
-## Export at 600x400
-
-## No interaction within month due to unbalanced dataset and similar effect of month across land cover types.
-summary(spatial_mod)
-AIC(spatial_mod)
-
-# Create a new data frame for predictions of effect of land cover and side
-newdata <- expand.grid(
-  dist = .5,                       # Fixed values of dist
-  lc = levels(ind_sub$lc),                  # All levels of lc
-  side = levels(ind_sub$side),              # All levels of side
-  month_num = unique(ind_sub$month_num),    # Include all unique values of month_num
-  X = mean(ind_sub$X),                      # Control for X at its mean value
-  Y = mean(ind_sub$Y)                       # Control for Y at its mean value
-)
-
-# Add predicted values to the new data frame
-predictions <- predict(spatial_mod, newdata, se.fit = TRUE)
-newdata$pred <- predictions$fit
-newdata$se <- predictions$se.fit
-# Calculate 95% confidence intervals
-newdata$lower <- newdata$pred - 1.96 * newdata$se
-newdata$upper <- newdata$pred + 1.96 * newdata$se
-
-## Calculate average predictions for each combination of dist, land cover and side
-avg_predictions <- aggregate(cbind(pred, lower, upper) ~ lc + side, data = newdata, FUN = mean)
-
-# Define custom labels for lc and month_num
-lc_labels <- c("Coniferous\nforest", "Deciduous\nforest", "Meadow", "Raised bog", 
-               "Fen/\ntransition mire", "Scrub")
-
-# Map these labels to the corresponding values in your data
-lc_labeller <- as_labeller(setNames(lc_labels, unique(ind_sub$lc)))
-
-# Plot using ggplot2
-ggplot(avg_predictions, aes(x = lc, y = pred, col = side)) +
-     geom_point(position = position_dodge(0.5), size = .8) +
-     geom_errorbar(aes(ymin = lower, ymax = upper), width = 0, position = position_dodge(0.5)) +
-     labs(col = "") + xlab("") + ylab("Predicted OPTRAM
-                                  ") + ## Higher values indicate higher water table
-     theme_minimal()
-     scale_x_discrete(labels =  c("June", "July", "Aug", "Sept", "Oct", "Nov", "Jan", "Feb", "March", "April", "May"))
-## Export at 600x400
+  scale_colour_manual(values = c('#336600','#33cc33','#ffb3ff','#cc6600','#808000','#F0E68C'), labels = c("Coniferous\nforest", "Deciduous\nforest", "Meadow", "Raised bog", "Fen/\ntransition mire", "Scrub")) 
 
 # Compare map of index with and without barrier
-# Predict to orginal dataset
-newdata_p <- ind_sub[ind_sub$month_num == 2,] # Predict for July when differences are most clear and for which we have more data (not much data for June)
+
+# Colour palette for map
+col <- c('#a50026','#d73027','#f46d43','#fdae61','#fee090','#ffffbf','#e0f3f8','#abd9e9','#74add1','#4575b4','#313695')
+
+newdata_p <- ind_sub[ind_sub$month_num == 3,] # Predict for August
 newdata_p$pred <- as.vector(predict(spatial_mod, newdata = newdata_p))
 newdata_p$side <- "south"
 newdata_p$dist <- 1
 newdata_p$pred_no_barrier <- as.vector(predict(spatial_mod, newdata = newdata_p))
 
-# Colour palette for map
-col <- c('#a50026','#d73027','#f46d43','#fdae61','#fee090','#ffffbf','#e0f3f8','#abd9e9','#74add1','#4575b4','#313695')
-
-# Plot this
 p1 <- ggplot() +
   geom_sf(data = newdata_p, mapping = aes(col = pred), size = .05) +
   geom_sf(data = road, linetype = "dashed") + 
   theme_map() +
+  labs(col = "OPTRAM") +
+  theme(legend.position = "bottom") +
   scale_colour_gradientn(colours = col) +
-  guides(col = "none") +
-  ggtitle("(b)") +
-  theme(legend.position = c(.8,.5)) ## 650x400
+  ggtitle("(b) With barrier effect") 
 
 p2 <- ggplot() +
   geom_sf(data = newdata_p, mapping = aes(col = pred_no_barrier), size = .05) +
   geom_sf(data = road, linetype = "dashed") + 
   theme_map() +
-  scale_colour_gradientn(colours = col, labels = NULL) +
-  labs(col = "") + 
-  ggtitle("(a)") +
-  theme(legend.position = c(.8,.5)) ## 650x400
-
-# Now predict for winter month
-newdata_m <- ind_sub[ind_sub$month_num == 10,] # Predict for July when differences are most clear and for which we have more data (not much data for June)
-newdata_m$pred <- as.vector(predict(spatial_mod, newdata = newdata_m))
-newdata_m$side <- "south"
-newdata_m$dist <- 1
-newdata_m$pred_no_barrier <- as.vector(predict(spatial_mod, newdata = newdata_m))
-
-# Plot this
-p3 <- ggplot() +
-  geom_sf(data = newdata_m, mapping = aes(col = pred), size = .05) +
-  geom_sf(data = road, linetype = "dashed") + 
-  theme_map() +
-  guides(col = "none") +
-  scale_colour_gradientn(colours = col) +
-  ggtitle("(d)") 
-
-p4 <- ggplot() +
-  geom_sf(data = newdata_m, mapping = aes(col = pred_no_barrier), size = .05) +
-  geom_sf(data = road, linetype = "dashed") + 
-  theme_map() +
   scale_colour_gradientn(colours = col) +
   guides(col = "none") +
-  ggtitle("(c)") 
+  ggtitle("(a) Without barrier effect") 
 
-grid.arrange(p2, p1, p4, p3, ncol = 2)
+grid.arrange(p2, p1, ncol = 1)
 
 # Look at effect of distance
 # Create a new data frame for predictions of effect of distance
