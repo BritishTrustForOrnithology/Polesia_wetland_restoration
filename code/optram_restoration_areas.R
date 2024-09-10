@@ -21,7 +21,7 @@ rm(list = ls())
 ## Formula and methodology from https://www.sciencedirect.com/science/article/pii/S0034425723002870 
 
 # Loading data from Google Earth engine
-pa_name <- "Cheremske"
+pa_name <- "Bile"
 # STR
 str_files <- list.files(pattern = paste0("STR-",pa_name), recursive = T) 
 str_list <- lapply(str_files, "read.csv") 
@@ -99,22 +99,17 @@ table(ind_sub$month,ind_sub$lc)
 ind_sub <- ind_sub[ind_sub$lc == 6 | ind_sub$lc == 7,]
 
 # Combine geometry and attributes in one step
-ind_sf <- st_as_sf(cbind(ind_sub, st_as_sf(geojson_sf(ind_sub$.geo), crs = 4326)))
+ind_sf <- st_as_sf(cbind(ind_sub, st_as_sf(geojson_sf(ind_sub$.geo), crs = 4326)))class(ind_sf)
 
-# Extract coordiantes to correct for for spatial autocorrelation 
+# Extract coordinates to correct for for spatial autocorrelation 
 ind_sf <- cbind(ind_sf, st_coordinates(ind_sf))
 
-ind_sf_bile <- ind_sf
-ind_sf_bile$site <- "Bile lake"
-ind_sf$site <- "Cheremske bog"
-ind_sf <- rbind(ind_sf, ind_sf_bile)
-ind_sf$site <- as.factor(ind_sf$site)
 # Run model exploring OPTRAM over time
 spatial_mod <- bam(
   optram ~
-    s(year, k = 3, by = site) +
+    s(year, k = 3) +
     s(month, bs = "cc", k = 3) + 
-    ti(year, month, bs = c("tp", "cc"), k = c(3,3), by = site) +
+    ti(year, month, bs = c("tp", "cc"), k = c(3,3)) +
     s(X, Y, bs = "ds", k = 99),    
   gamma = 1.4, select = T, discrete = T,
   data = ind_sf
@@ -127,9 +122,8 @@ plot(spatial_mod)
 # Plot interaction between year and month
 # Create a new data frame for predictions
 newdata <- expand.grid(
-  site = unique(ind_sf$site),
-  month = unique(ind_sf$month),    
-  year = unique(ind_sf$year),    
+  month = unique(ind_sf$month),    # Include all unique values of month
+  year = unique(ind_sf$year),    # Include all unique values of month
   X = mean(ind_sf$X),                      # Control for X at its mean value
   Y = mean(ind_sf$Y)                       # Control for Y at its mean value
 )
@@ -142,18 +136,15 @@ newdata$se <- predictions$se.fit
 newdata$lower <- newdata$pred - 1.96 * newdata$se
 newdata$upper <- newdata$pred + 1.96 * newdata$se
 
-month_labels <- c("Jan", "Feb", "March", "April", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec")
-month_labeller <- as_labeller(setNames(month_labels, 1:12))
-
 # Plot using ggplot2
-ggplot(newdata, aes(x = year, y = pred, linetype = site, group = site)) +
+ggplot(newdata, aes(x = year, y = pred, col = as.factor(month), fill = as.factor(month), group = month)) +
   geom_line() +
-  facet_wrap(~month, labeller = labeller(month = month_labeller))+
-  labs(linetype = "") +
+  scale_fill_manual(values = c('#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c','#fdbf6f','#ff7f00','#cab2d6'), labels = c("March","April","May","June","July","August","September","October","November")) +
+  scale_colour_manual(values = c('#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c','#fdbf6f','#ff7f00','#cab2d6'), labels = c("March","April","May","June","July","August","September","October","November")) +
   geom_ribbon(aes(ymin = lower, ymax = upper), col = NA, alpha = .5) +
   labs(col = "", fill = "") + xlab("") + ylab("Predicted OPTRAM
                                   ") + 
-  theme_classic() 
+  theme_minimal() 
 
 # Produce animation ####
 
