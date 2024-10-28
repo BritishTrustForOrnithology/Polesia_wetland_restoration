@@ -1,5 +1,5 @@
 ##################################################################
-# CALCULATING OPTRAM, A MEASURE OF SOIL MOISTURE
+# CALCULATING OPTRAM, A MEASURE OF WATER TABLE DEPTH
 # M. Kirkland
 # 19/08/24
 ##################################################################
@@ -12,7 +12,6 @@ library(data.table)
 library(dplyr)
 library(ggthemes)
 library(gridExtra)
-## library(gganimate)
 library(tidyr)
 
 # Clear data
