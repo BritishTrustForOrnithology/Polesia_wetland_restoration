@@ -10,7 +10,7 @@ The code provided here can be used to monitor moisture content in peatlands over
 
 1. Identify treeless areas (<10% tree cover) to select “best pixels”, in the absence of  long-time series of in-situ water table depth
 2. Sample area of interest using https://code.earthengine.google.com/3006482d8a5c8a37a92b11af089e7f02 
-3. Extract OPTRAM parameters in GEE following methodology of Burdun et al. (2023), pre-processing Sentinel-2 images to remove cloud, snow, and shadows 
+3. Extract OPTRAM parameters in GEE following methodology of Burdun et al. (2023), pre-processing Sentinel-2 images to remove cloud, snow, and shadows. Depending on size of area of interest, may need to change scale value. 
     - Wet edge https://code.earthengine.google.com/6393cf65a60f823d3e7a799f6c8623b9 
     - Dry edge https://code.earthengine.google.com/11025012e8fb646da96bd37a40ab2d11?noload=true 
     - NDVI and STR https://code.earthengine.google.com/0f6f99fb6a857d36d675bbe19cd3ae08 
