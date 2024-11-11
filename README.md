@@ -1,4 +1,4 @@
-# Developing remote sensing monitoring programme to evaluate effect of restoration measures
+# Developing a remote sensing monitoring programme to evaluate effect of restoration measures
 
 Optical TRApezoid Model (OPTRAM) is based on Shortwave Infrared and reveals temporal water table dynamics/soil moisture in northern peatlands (Burdun et al. 2023). It does not directly observe the position of the water table, but indicates vegetation moisture content (Kalacska et al. 2018). An area covered by vegetation strongly sensitive to water fluctuations (sedges, mosses, etc.) can be used as a "best pixel", and OPTRAM values over this area will reflect temporal changes in water table depth. However, OPTRAM values derived over tree-covered areas will not be informative. OPTRAM performance is known to suffer from oversaturated pixels, e.g., pixels covered by standing water or wet vegetation (Sadeghi et al. 2017), which have high STR values (OPTRAM values > 1) and influence the wrong estimation of wet edge (Sadeghi et al. 2017). Positive OPTRAM values indicate a higher water content and vice versa. OPTRAM ranges from 0-1. 
 
