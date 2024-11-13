@@ -12,7 +12,7 @@ library(data.table)
 library(dplyr)
 library(ggthemes)
 library(gridExtra)
-library(tidyr)
+library(tidyverse)
 
 # Clear data
 rm(list = ls())
@@ -32,14 +32,14 @@ ndvi_list <- lapply(ndvi_files, "read.csv")
 # Add file path (i.e. site ID) to dataframes
 ndvi_list <- lapply(seq_along(ndvi_list), function(i) {
   df <- ndvi_list[[i]]               # Get each data frame
-  df$dataset <- paste0(pa_name,substr(ndvi_files[i], 45, 45))   # Add dataset as a column
+  df$dataset <- paste0(pa_name,str_extract_all(ndvi_files[i], "\\d+")[[1]])    # Add dataset as a column
   return(df)                        # Return the updated data frame
 })
 
 str_list <- lapply(seq_along(str_list), function(i) {
   df <- str_list[[i]]               
-  df$dataset <- paste0(pa_name,substr(str_files[i], 44, 44))    
-  return(df)                        #
+  df$dataset <- paste0(pa_name,str_extract_all(ndvi_files[i], "\\d+")[[1]])    
+  return(df)                        
 })
 
 # Flatten list into dataframe 
