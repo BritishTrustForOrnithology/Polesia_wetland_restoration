@@ -13,6 +13,8 @@ library(dplyr)
 library(ggthemes)
 library(gridExtra)
 library(tidyverse)
+library(mgcv)
+library(stringr)
 
 # Clear data
 rm(list = ls())
@@ -20,7 +22,7 @@ rm(list = ls())
 ## Formula and methodology from https://www.sciencedirect.com/science/article/pii/S0034425723002870 
 
 # Loading data from Google Earth engine
-pa_name <- "cheremske"
+pa_name <- "somyne"
 # STR
 str_files <- list.files(pattern = paste0("STR-",pa_name), recursive = T) 
 str_list <- lapply(str_files, "read.csv") 
@@ -73,7 +75,7 @@ ind$NDVI <- as.numeric(ndvi_long$NDVI)
 params <- read.csv("./data/GEE_data/restoration_optram_params.csv")
 params <- params[grepl(pa_name, params$dataset),]
 mrg <- merge(ind, params)
-mrg$dry <- mrg$dry.y+ (mrg$dry.slope*mrg$NDVI) 
+mrg$dry <- mrg$dry.y + (mrg$dry.slope*mrg$NDVI) 
 mrg$wet <- mrg$wet.y + (mrg$wet.slope*mrg$NDVI)
 	
 # Calculate OPTRAM 
@@ -91,15 +93,14 @@ sf <- cbind(sf, st_coordinates(sf))
 # Run time series model
 mod <- bam(optram ~ s(year, k = 3, bs = "cr") + s(month, k = 3, bs = "cc") + s(X, Y, bs = "ds", k = 99), 
            data = sf, family = gaussian, discrete = T, gamma = 1.4, select = T)
-plot(mod)
 
 # Plot data
-ggplot() +
-  geom_point(data = mrg, mapping = aes(x = date, y = optram, col = optram)) +
+ggplot(mrg, aes(x = date, y = optram)) +
+  geom_point(mapping = aes(col = optram), size = .5) +
+  geom_smooth() +
   theme_classic() +
   scale_colour_gradientn(colors = c('#d73027','#f46d43','#fdae61','#fee090','#e0f3f8','#abd9e9','#74add1','#4575b4','darkblue')) +
-  ylim(0, 1) +
   xlab("Year") + ylab("OPTRAM") +
-  labs(col = NULL)
+  labs(col = NULL, title = str_to_title(pa_name))
 
 
