@@ -4,24 +4,32 @@ Optical TRApezoid Model (OPTRAM) is based on Shortwave Infrared and reveals temp
 
 An area covered by vegetation strongly sensitive to water fluctuations (sedges, mosses, etc.) can be used as a "best pixel", and OPTRAM values over this area will reflect temporal changes in water table depth. However, OPTRAM values derived over tree-covered areas will not be informative. Given the absence of long-time series of in-situ water table depth in Polesia to select the "best pixels", we select treeless pixels using NASA's [Landsat Vegetation Continuous Fields](https://developers.google.com/earth-engine/datasets/catalog/NASA_MEASURES_GFCC_TC_v3) tree cover layers available in the Google Earth Engine (GEE) catalogue. 
 
-The Sentinel satellite imagery was chosen as the basis to calculate OPTRAM indices for this project, due to the unique high spatial and temporal resolution (from 10 m to 60 m; ca. every 3 to 4 days) available for Europe (though we resampled the images to a 50m spatial resolution due to the computational limits of GEE). The Sentinel-2 imagery consists of 13 bands which describe the measured reflected radiance of the Earth's surface. GEE provides online access to Sentinel-1 C band SAR and Senintel-2 level-2A data that is pre-processed using Sen2Cor. Level-2A processing comprises a scene classification (indicates presence of snow/clouds) and an atmospheric correction (providing bottom of the atmosphere reflectance products) (Obregón et al. 2019). 
+The Sentinel satellite imagery was chosen as the basis to calculate OPTRAM indices for this project, due to the unique high spatial and temporal resolution (from 10 m to 60 m; ca. every 3 to 4 days) available for Europe (though we resampled the images to a 50m spatial resolution for calculation of edge parameters due to the computational limits of GEE). The Sentinel-2 imagery consists of 13 bands which describe the measured reflected radiance of the Earth's surface. GEE provides online access to Sentinel-1 C band SAR and Senintel-2 level-2A data that is pre-processed using Sen2Cor. Level-2A processing comprises a scene classification (indicates presence of snow/clouds) and an atmospheric correction (providing bottom of the atmosphere reflectance products) (Obregón et al. 2019). 
 
-The code provided here is adapted from Burdun et al. (2023) and can be used to monitor moisture content in peatlands over time. Because of the large size of our restoration areas, they were subdivided into smaller sections prior to uploading to GEE in QGIS, and the GEE code was run on each section. 
+The code provided here is adapted from Burdun et al. (2023) and can be used to monitor moisture content in peatlands over time. Because of the large size of our restoration areas, they were subdivided into smaller sections prior to uploading to GEE in QGIS, and the GEE code was run on each section. We used this code to monitor peatland moisture content between April to September 2016–2024. 
 
-## Analysis steps: 
+The code provided is run using the **Somyne** restoration area as an example. 
+
+## Analysis steps
 
 1. Identify treeless areas (<10% tree cover) to select “best pixels” and 
 3. Extract OPTRAM parameters in GEE following the methodology of Burdun et al. (2023)
 4. Calculate OPTRAM using OPTRAM_restoration_areas.R
 
-## Links to GEE code
+### Links to GEE code
 
-1. [Sample restoration area](https://code.earthengine.google.com/3006482d8a5c8a37a92b11af089e7f02)
-2. [Wet edge](https://code.earthengine.google.com/9c582f663b60df45da2de9303fb1d97d) 
-3. [Dry edge](https://code.earthengine.google.com/ff051e74c6ea4cba4681bf89e76ca082)
-4. [NDVI and STR](https://code.earthengine.google.com/0f6f99fb6a857d36d675bbe19cd3ae08)
-   
-## References:
+[Sample treeless pixels](https://code.earthengine.google.com/132f68ace03b4b6d163a193e4c95791c)
+
+[Wet edge](https://code.earthengine.google.com/0c952362100e2e9bff8e2ed95c6a02cf)
+
+[Dry edge](https://code.earthengine.google.com/79a97eb07212131873a7f76097510a9d)
+
+[NDVI and STR](https://code.earthengine.google.com/4cc1a6e76bbc216f82dd692598937055)
+
+## Example results 
+![Rplot](https://github.com/user-attachments/assets/a942ca3e-cf98-4e40-8bd6-182a447076dc)
+
+## References
 
 Burdun, Iuliia, Michel Bechtold, Mika Aurela, Gabrielle De Lannoy, Ankur R. Desai, Elyn Humphreys, Santtu Kareksela, et al. 2023. ‘Hidden Becomes Clear: Optical Remote Sensing of Vegetation Reveals Water Table Dynamics in Northern Peatlands’. Remote Sensing of Environment 296 (October):113736. https://doi.org/10.1016/j.rse.2023.113736.
 
