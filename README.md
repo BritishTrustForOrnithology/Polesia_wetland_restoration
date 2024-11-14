@@ -10,13 +10,17 @@ The code provided here is adapted from Burdun et al. (2023) and can be used to m
 
 ## Analysis steps: 
 
-1. Identify treeless areas (<10% tree cover) to select “best pixels” and [sample study area](https://code.earthengine.google.com/3006482d8a5c8a37a92b11af089e7f02)  
+1. Identify treeless areas (<10% tree cover) to select “best pixels” and 
 3. Extract OPTRAM parameters in GEE following the methodology of Burdun et al. (2023)
-    - [Wet edge](https://code.earthengine.google.com/9c582f663b60df45da2de9303fb1d97d) 
-    - [Dry edge](https://code.earthengine.google.com/ff051e74c6ea4cba4681bf89e76ca082)
-    - [NDVI and STR](https://code.earthengine.google.com/0f6f99fb6a857d36d675bbe19cd3ae08)  
 4. Calculate OPTRAM using OPTRAM_restoration_areas.R
 
+## Links to GEE code
+
+1. [Sample restoration area](https://code.earthengine.google.com/3006482d8a5c8a37a92b11af089e7f02)
+2. [Wet edge](https://code.earthengine.google.com/9c582f663b60df45da2de9303fb1d97d) 
+3. [Dry edge](https://code.earthengine.google.com/ff051e74c6ea4cba4681bf89e76ca082)
+4. [NDVI and STR](https://code.earthengine.google.com/0f6f99fb6a857d36d675bbe19cd3ae08)
+   
 ## References:
 
 Burdun, Iuliia, Michel Bechtold, Mika Aurela, Gabrielle De Lannoy, Ankur R. Desai, Elyn Humphreys, Santtu Kareksela, et al. 2023. ‘Hidden Becomes Clear: Optical Remote Sensing of Vegetation Reveals Water Table Dynamics in Northern Peatlands’. Remote Sensing of Environment 296 (October):113736. https://doi.org/10.1016/j.rse.2023.113736.
