@@ -22,7 +22,7 @@ rm(list = ls())
 ## Formula and methodology from https://www.sciencedirect.com/science/article/pii/S0034425723002870 
 
 # Loading data from Google Earth engine
-pa_name <- "somyne"
+pa_name <- "cheremske"
 # STR
 str_files <- list.files(pattern = paste0("STR-",pa_name), recursive = T) 
 str_list <- lapply(str_files, "read.csv") 
@@ -85,7 +85,7 @@ mrg$optram <- (mrg$STR - mrg$dry)/(mrg$wet - mrg$dry)
 mrg <- mrg[mrg$optram <= 1 & mrg$optram >= 0,]
 
 # Convert to spatial object and plot
-sf <- cbind(st_as_sf(geojson_sf(str_df$.geo), st_crs = 4326),str_df)
+sf <- cbind(st_as_sf(geojson_sf(mrg$.geo), st_crs = 4326),mrg)
 plot(sf$geometry)
 # Add coordinates 
 sf <- cbind(sf, st_coordinates(sf))
