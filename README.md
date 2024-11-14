@@ -24,7 +24,7 @@ The code provided is run using the **Somyne** restoration area as an example.
 
 [Dry edge](https://code.earthengine.google.com/79a97eb07212131873a7f76097510a9d)
 
-[NDVI and STR](https://code.earthengine.google.com/4cc1a6e76bbc216f82dd692598937055)
+[NDVI and STR](https://code.earthengine.google.com/c5b461cefadd47f0782fdb3117c9a48c)
 
 ## Example results 
 ![Rplot](https://github.com/user-attachments/assets/a942ca3e-cf98-4e40-8bd6-182a447076dc)
