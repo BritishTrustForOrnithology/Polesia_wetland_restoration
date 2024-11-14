@@ -6,5 +6,9 @@
 *.txt
 *.jpg
 results/
-data/
 *.docx
+data/GIS_data-20240927T074221Z-001/
+data/WetEagles-main/
+data/Belarus/
+data/elsppolesiashapes/
+data/barrier_polygons/

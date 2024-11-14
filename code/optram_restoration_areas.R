@@ -20,7 +20,7 @@ rm(list = ls())
 ## Formula and methodology from https://www.sciencedirect.com/science/article/pii/S0034425723002870 
 
 # Loading data from Google Earth engine
-pa_name <- "chernobyl"
+pa_name <- "cheremske"
 # STR
 str_files <- list.files(pattern = paste0("STR-",pa_name), recursive = T) 
 str_list <- lapply(str_files, "read.csv") 
@@ -69,7 +69,7 @@ ind <- str_long
 ind$STR <- as.numeric(ind$STR)
 ind$NDVI <- as.numeric(ndvi_long$NDVI)
 
-# Dry and wet edge paramaters for 2023
+# Dry and wet edge paramaters. This is where you have storted them from GEE. 
 params <- read.csv("./data/GEE_data/restoration_optram_params.csv")
 params <- params[grepl(pa_name, params$dataset),]
 mrg <- merge(ind, params)
@@ -83,7 +83,7 @@ mrg$optram <- (mrg$STR - mrg$dry)/(mrg$wet - mrg$dry)
 mrg <- mrg[mrg$optram <= 1 & mrg$optram >= 0,]
 
 # Convert to spatial object and plot
-sf <- cbind(st_as_sf(geojson_sf(mrg$.geo), st_crs = 4326),mrg)
+sf <- cbind(st_as_sf(geojson_sf(str_df$.geo), st_crs = 4326),str_df)
 plot(sf$geometry)
 # Add coordinates 
 sf <- cbind(sf, st_coordinates(sf))
