@@ -2,7 +2,7 @@
 
 Optical TRApezoid Model (OPTRAM) is based on Shortwave Infrared and reveals temporal water table dynamics/soil moisture in northern peatlands (Burdun et al. 2023). Positive OPTRAM values indicate a higher water content and vice versa. OPTRAM performance is known to suffer from oversaturated pixels, e.g., pixels covered by standing water or wet vegetation (Sadeghi et al. 2017) which have high STR values (OPTRAM values > 1) and influence the wrong estimation of wet edge (Sadeghi et al. 2017). OPTRAM values > 1 are therefore removed. 
 
-An area covered by vegetation strongly sensitive to water fluctuations (sedges, mosses, etc.) can be used as a "best pixel", and OPTRAM values over this area will reflect temporal changes in water table depth. However, OPTRAM values derived over tree-covered areas will not be informative. Given the absence of long-time series of in-situ water table depth in Polesia to select the "best pixels", we select pixels with < 10% tree cover using NASA's [Landsat Vegetation Continuous Fields](https://developers.google.com/earth-engine/datasets/catalog/NASA_MEASURES_GFCC_TC_v3) tree cover layers available in the Google Earth Engine (GEE) catalogue. 
+An area covered by vegetation strongly sensitive to water fluctuations (sedges, mosses, etc.) can be used as a "best pixel", and OPTRAM values over this area will reflect temporal changes in water table depth. However, OPTRAM values derived over tree-covered areas will not be informative. Given the absence of long-time series of in-situ water table depth in Polesia to select the "best pixels", we select pixels with < 5% tree cover using NASA's [Landsat Vegetation Continuous Fields](https://developers.google.com/earth-engine/datasets/catalog/NASA_MEASURES_GFCC_TC_v3) tree cover layers available in the Google Earth Engine (GEE) catalogue. 
 
 The Sentinel satellite imagery was chosen as the basis to calculate OPTRAM indices for this project, due to the unique high spatial and temporal resolution (from 10 m to 60 m; ca. every 3 to 4 days) available for Europe (though we resampled the images to a 50m spatial resolution for the calculation of edge parameters due to the computational limits of GEE). The Sentinel-2 imagery consists of 13 bands which describe the measured reflected radiance of the Earth's surface. GEE provides online access to Sentinel-1 C band SAR and Senintel-2 level-2A data that is pre-processed using Sen2Cor. Level-2A processing comprises a scene classification (indicates presence of snow/clouds) and an atmospheric correction (providing bottom of the atmosphere reflectance products) (Obregón et al. 2019). 
 
@@ -12,22 +12,22 @@ The code provided is run using the **Somyne** restoration area as an example.
 
 ## Analysis steps
 
-1. Identify treeless areas (< 10% tree cover) to select “best pixels”
+1. Identify treeless areas (< 5% tree cover) to select “best pixels”
 3. Extract OPTRAM parameters in GEE following the methodology of Burdun et al. (2023)
 4. Calculate OPTRAM using OPTRAM_restoration_areas.R
 
 ### Links to GEE code
 
-[Sample treeless pixels](https://code.earthengine.google.com/132f68ace03b4b6d163a193e4c95791c)
+[Sample treeless pixels](https://code.earthengine.google.com/576710d96fc3929014cb0c099f5396bf)
 
-[Wet edge](https://code.earthengine.google.com/0c952362100e2e9bff8e2ed95c6a02cf)
+[Wet edge](https://code.earthengine.google.com/58b4b7b1e53dfae855a1a4176d24616b)
 
-[Dry edge](https://code.earthengine.google.com/79a97eb07212131873a7f76097510a9d)
+[Dry edge](https://code.earthengine.google.com/bb3d09b8392c2f9719fa26e97be20700)
 
-[NDVI and STR](https://code.earthengine.google.com/242d724d1601d54914a5def1e77392f8)
+[NDVI and STR](https://code.earthengine.google.com/f4652b1982d6aed00aa4c26c9ce010f0)
 
 ## Example results 
-![Rplot](https://github.com/user-attachments/assets/a942ca3e-cf98-4e40-8bd6-182a447076dc)
+![Rplot10](https://github.com/user-attachments/assets/8a5e374f-5ab9-4850-87d4-f0380345a6c9)
 
 ## References
 
