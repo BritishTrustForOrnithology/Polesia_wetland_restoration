@@ -22,7 +22,7 @@ rm(list = ls())
 ## Formula and methodology from https://www.sciencedirect.com/science/article/pii/S0034425723002870 
 
 # Loading data from Google Earth engine
-pa_name <- "cheremske"
+pa_name <- "somyne"
 # STR
 str_files <- list.files(pattern = paste0("STR-",pa_name), recursive = T) 
 str_list <- lapply(str_files, "read.csv") 
@@ -49,12 +49,12 @@ ndvi_df <- Reduce(function(x, y) merge(x, y, all=T), ndvi_list)
 str_df <- Reduce(function(x, y) merge(x, y, all=T), str_list)
 
 # Rename columns to show dates. Some columns have full stops between year and month so remove these. 
-colnames(str_df)[!colnames(str_df) %in% c("system.index","dataset",".geo")] <- substr(gsub("\\.","",colnames(str_df)[!colnames(str_df) %in% c("system.index","dataset",".geo")]),2,9)
-colnames(ndvi_df)[!colnames(str_df) %in% c("system.index","dataset",".geo")] <- substr(gsub("\\.","",colnames(ndvi_df)[!colnames(str_df) %in% c("system.index","dataset",".geo")]),2,9)
+colnames(str_df)[!colnames(str_df) %in% c("system.index","dataset",".geo","remapped")] <- substr(gsub("\\.","",colnames(str_df)[!colnames(str_df) %in% c("system.index","dataset",".geo","remapped")]),2,9)
+colnames(ndvi_df)[!colnames(str_df) %in% c("system.index","dataset",".geo","remapped")] <- substr(gsub("\\.","",colnames(ndvi_df)[!colnames(str_df) %in% c("system.index","dataset",".geo","remapped")]),2,9)
 
 # Convert to long format
-str_long <- melt(setDT(str_df), id.vars = c("system.index","dataset",".geo"), variable.name = "date", value.name = "STR")
-ndvi_long <- melt(setDT(ndvi_df), id.vars = c("system.index","dataset",".geo"), variable.name = "date", value.name = "NDVI")
+str_long <- melt(setDT(str_df), id.vars = c("system.index","dataset",".geo","remapped"), variable.name = "date", value.name = "STR")
+ndvi_long <- melt(setDT(ndvi_df), id.vars = c("system.index","dataset",".geo","remapped"), variable.name = "date", value.name = "NDVI")
 
 # Remove NA 
 str_long <- str_long[!is.na(str_long$STR)]
@@ -73,7 +73,8 @@ ind$NDVI <- as.numeric(ndvi_long$NDVI)
 
 # Dry and wet edge paramaters. This is where you have storted them from GEE. 
 params <- read.csv("./data/GEE_data/restoration_optram_params.csv")
-params <- params[grepl(pa_name, params$dataset),]
+params <- params %>% filter(grepl(pa_name, params$dataset))
+params <- params %>% filter(ndvi.threshold == 0.9) ## Best threshold for NDVI for our study region
 mrg <- merge(ind, params)
 mrg$dry <- mrg$dry.y + (mrg$dry.slope*mrg$NDVI) 
 mrg$wet <- mrg$wet.y + (mrg$wet.slope*mrg$NDVI)
@@ -86,21 +87,15 @@ mrg <- mrg[mrg$optram <= 1 & mrg$optram >= 0,]
 
 # Convert to spatial object and plot
 sf <- cbind(st_as_sf(geojson_sf(mrg$.geo), st_crs = 4326),mrg)
-plot(sf$geometry)
 # Add coordinates 
 sf <- cbind(sf, st_coordinates(sf))
 
-# Run time series model
-mod <- bam(optram ~ s(year, k = 3, bs = "cr") + s(month, k = 3, bs = "cc") + s(X, Y, bs = "ds", k = 99), 
-           data = sf, family = gaussian, discrete = T, gamma = 1.4, select = T)
-
 # Plot data
 ggplot(mrg, aes(x = date, y = optram)) +
-  geom_point(mapping = aes(col = optram), size = .5) +
-  geom_smooth() +
+  geom_boxplot(mapping = aes(group = year), outlier.shape = NA) +
+  geom_point(mapping = aes(col = optram), size = 1) +
   theme_classic() +
-  scale_colour_gradientn(colors = c('#d73027','#f46d43','#fdae61','#fee090','#e0f3f8','#abd9e9','#74add1','#4575b4','darkblue')) +
+  ylim(0,1) +
+  scale_colour_gradientn(colors = c('#d73027','#f46d43','#fdae61','#fee090','#abd9e9','#74add1','#4575b4','darkblue'), limits = c(0,1)) +
   xlab("Year") + ylab("OPTRAM") +
   labs(col = NULL, title = str_to_title(pa_name))
-
-
