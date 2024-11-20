@@ -6,7 +6,7 @@ An area covered by vegetation strongly sensitive to water fluctuations (sedges, 
 
 The Sentinel satellite imagery was chosen as the basis to calculate OPTRAM indices for this project, due to the unique high spatial and temporal resolution (from 10 m to 60 m; ca. every 3 to 4 days) available for Europe (though we resampled the images to a 50m spatial resolution for the calculation of edge parameters due to the computational limits of GEE). The Sentinel-2 imagery consists of 13 bands which describe the measured reflected radiance of the Earth's surface. GEE provides online access to Sentinel-1 C band SAR and Senintel-2 level-2A data that is pre-processed using Sen2Cor. Level-2A processing comprises a scene classification (indicates presence of snow/clouds) and an atmospheric correction (providing bottom of the atmosphere reflectance products) (Obregón et al. 2019). 
 
-The code provided here is adapted from Burdun et al. (2023) and can be used to monitor moisture content in peatlands over time. Because of the large size of our restoration areas, they were subdivided into smaller sections prior to uploading to GEE in QGIS, and the GEE code was run on each section. We used this code to monitor peatland moisture content between April to September 2016–2024. Because they dry edge estimation might suffer from the missing dry pixels with high NDVI values, we limited the range of NDVI values between 0.1 and 0.9 within which maximal (wet edge) and minimal (dry edge) STR values would be derived. We identified these ranges visually by examining NDVI–STR spaces for our study sites. We provide GEE code ([link](https://code.earthengine.google.com/1fd6aad91e494d8a700ee4b6fc821155)) to extract NDVI-STR values and R code (plotting_NDVI_STR_space.R) to visualise these to determine the most appropriate NDVI threshold for a given study area. 
+The code provided here is adapted from Burdun et al. (2023) and can be used to monitor moisture content in peatlands over time. Because of the large size of our restoration areas, they were subdivided into smaller sections prior to uploading to GEE in QGIS, and the GEE code was run on each section. We used this code to monitor peatland moisture content between April to September 2016–2024. Because they dry edge estimation might suffer from the missing dry pixels with high NDVI values, we limited the range of NDVI values between 0.1 and 0.9 within which maximal (wet edge) and minimal (dry edge) STR values would be derived. We identified these ranges visually by examining NDVI–STR spaces for our study sites. We provide GEE code to extract NDVI-STR values and R code (plotting_NDVI_STR_space.R) to visualise these, to determine the most appropriate NDVI threshold for a given study area. 
 
 The code provided is run using the **Somyne** restoration area as an example. 
 
@@ -24,7 +24,9 @@ The code provided is run using the **Somyne** restoration area as an example.
 
 [Dry edge](https://code.earthengine.google.com/bb3d09b8392c2f9719fa26e97be20700)
 
-[NDVI and STR](https://code.earthengine.google.com/f4652b1982d6aed00aa4c26c9ce010f0)
+[NDVI and STR of treeless pixels](https://code.earthengine.google.com/f4652b1982d6aed00aa4c26c9ce010f0)
+
+[NDVI-STR space](https://code.earthengine.google.com/1fd6aad91e494d8a700ee4b6fc821155)
 
 ## Example results 
 ![Rplot10](https://github.com/user-attachments/assets/8a5e374f-5ab9-4850-87d4-f0380345a6c9)
