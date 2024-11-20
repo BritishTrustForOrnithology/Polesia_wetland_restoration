@@ -10,7 +10,7 @@ The code provided here is adapted from Burdun et al. (2023) and can be used to m
 
 The code provided is run using the **Somyne** restoration area as an example. 
 
-## Analysis steps
+## Main analysis steps
 
 1. Identify treeless areas (< 5% tree cover) to select “best pixels”
 3. Extract OPTRAM parameters in GEE following the methodology of Burdun et al. (2023)
